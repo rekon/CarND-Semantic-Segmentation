@@ -90,7 +90,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
         kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3),
         name='my_layer4_input2')
 
-    layer4_output = tf.add(layer4_input1, layer4_input2, ,
+    layer4_output = tf.add(layer4_input1, layer4_input2,
                            name='my_layer4_output')
 
     layer3_input1 = tf.layers.conv2d_transpose(
@@ -218,20 +218,26 @@ def run():
         epochs = 10
         batch_size = 5
 
-        label = tf.placeholder(tf.int32, [None, None, None, num_classes], name='my_label')
+        label = tf.placeholder(
+            tf.int32, [None, None, None, num_classes], name='my_label')
         learning_rate = tf.placeholder(tf.float32, name='my_learning_rate')
 
-        input_image, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(sess, vgg_path)
+        input_image, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(
+            sess, vgg_path)
 
-        nn_last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes)
+        nn_last_layer = layers(
+            vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes)
 
-        logits, train_op, cross_entropy_loss = optimize(nn_last_layer, label, learning_rate, num_classes)
+        logits, train_op, cross_entropy_loss = optimize(
+            nn_last_layer, label, learning_rate, num_classes)
         # TODO: Train NN using the train_nn function
 
-        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate)
+        train_nn(sess, epochs, batch_size, get_batches_fn, train_op,
+                 cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate)
 
         # TODO: Save inference data using helper.save_inference_samples
-        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+        helper.save_inference_samples(
+            runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
         # OPTIONAL: Apply the trained model to a video
 
