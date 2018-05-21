@@ -8,9 +8,9 @@ import argparse
 
 FREEZE_GRAPH = False
 KEEP_PROB = 1
-LEARNING_RATE = 5e-4
-EPOCHS = 15
-BATCH_SIZE = 5
+LEARNING_RATE = 4e-5
+EPOCHS = 20
+BATCH_SIZE = 8
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion(
@@ -242,7 +242,7 @@ def run():
     )
 
     args = parser.parse_args()
-    print('\nArguments passed: ',args)
+    print('\nArguments passed: ', args)
 
     FREEZE_GRAPH = True
     EPOCHS = args.epochs
@@ -250,7 +250,8 @@ def run():
     KEEP_PROB = args.keep_probability
     BATCH_SIZE = args.batch_size
 
-    print('\nTraining with epochs:', EPOCHS, 'learning rate:', LEARNING_RATE, 'keep_prob:', KEEP_PROB, 'batch_size:', BATCH_SIZE)
+    print('\nTraining with epochs:', EPOCHS, 'learning rate:',
+          LEARNING_RATE, 'keep_prob:', KEEP_PROB, 'batch_size:', BATCH_SIZE)
 
     num_classes = 2
     image_shape = (160, 576)
@@ -308,7 +309,7 @@ def run():
 
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(
-            runs_dir, data_dir, sess, image_shape, logits, KEEP_PROB, input_image)
+            runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
         # OPTIONAL: Apply the trained model to a video
 
