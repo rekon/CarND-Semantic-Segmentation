@@ -8,7 +8,7 @@ urlretrieve(
 
 print('Extracting model...')
 zip_ref = zipfile.ZipFile('./kitti.zip', 'r')
-zip_ref.extractall('./data_road/')
+zip_ref.extractall('./')
 zip_ref.close()
 
 # Remove zip file to save space

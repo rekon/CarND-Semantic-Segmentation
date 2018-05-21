@@ -8,8 +8,8 @@ import argparse
 
 FREEZE_GRAPH = False
 KEEP_PROB = 1
-LEARNING_RATE = 5e-2
-EPOCHS = 10
+LEARNING_RATE = 5e-4
+EPOCHS = 15
 BATCH_SIZE = 5
 
 # Check TensorFlow Version
@@ -308,7 +308,7 @@ def run():
 
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(
-            runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+            runs_dir, data_dir, sess, image_shape, logits, KEEP_PROB, input_image)
 
         # OPTIONAL: Apply the trained model to a video
 
