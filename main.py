@@ -7,10 +7,12 @@ import project_tests as tests
 import argparse
 
 FREEZE_GRAPH = False
+IS_TRAINING = False
 KEEP_PROB = 1
 LEARNING_RATE = 4e-5
 EPOCHS = 20
 BATCH_SIZE = 8
+
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion(
@@ -178,6 +180,10 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     """
     # TODO: Implement function
     loss_arr = []
+    min_loss = 1e5
+    save_path = None
+    if IS_TRAINING:
+        saver = tf.train.Saver()
     for epoch in range(epochs):
         print("EPOCH {} ...".format(epoch+1))
         for X_batch, y_batch in get_batches_fn(batch_size):
@@ -190,8 +196,11 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             })
         loss_arr.append(loss)
         print('Loss: {:.3f}'.format(loss))
+        if loss < min_loss and IS_TRAINING:
+            min_loss = loss
+            save_path = saver.save(sess, "/checkpoints/model.ckpt")
 
-    # pass
+    return save_path
 
 
 tests.test_train_nn(train_nn)
@@ -199,6 +208,7 @@ tests.test_train_nn(train_nn)
 
 def run():
     global FREEZE_GRAPH
+    global IS_TRAINING
     global KEEP_PROB
     global LEARNING_RATE
     global EPOCHS
@@ -245,6 +255,7 @@ def run():
     print('\nArguments passed: ', args)
 
     FREEZE_GRAPH = True
+    IS_TRAINING = True
     EPOCHS = args.epochs
     LEARNING_RATE = args.learning_rate
     KEEP_PROB = args.keep_probability
@@ -302,11 +313,15 @@ def run():
         else:
             sess.run(tf.global_variables_initializer())
 
+        saver = tf.train.Saver()
+
         # TODO: Train NN using the train_nn function
 
-        train_nn(sess, epochs, batch_size, get_batches_fn, train_op,
+        best_session_path = train_nn(sess, epochs, batch_size, get_batches_fn, train_op,
                  cross_entropy_loss, input_image, label, keep_prob, learning_rate)
 
+        if IS_TRAINING:
+            saver.restore(sess, best_session_path)
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(
             runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
