@@ -4,9 +4,13 @@ import helper
 import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
+import argparse
 
-FREEZE_GRAPH = True
-
+FREEZE_GRAPH = False
+KEEP_PROB = 1
+LEARNING_RATE = 5e-2
+EPOCHS = 10
+BATCH_SIZE = 5
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion(
@@ -108,7 +112,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
                            name='my_layer3_output')
 
     nn_final_layer = tf.layers.conv2d_transpose(
-        layer3_output, (16, 16), (8, 8), padding='same',
+        layer3_output, num_classes, (16, 16), (8, 8), padding='same',
         kernel_initializer=tf.random_normal_initializer(stddev=1e-2),
         kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3),
         name='my_nn_final_layer')
@@ -129,9 +133,10 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     :return: Tuple of (logits, train_op, cross_entropy_loss)
     """
     # TODO: Implement function
-    logits = tf.reshape(-1, num_classes, name='my_logits_reshape')
-    correct_label = tf.reshape(-1, num_classes,
-                               name='my_correct_labels_reshape')
+    logits = tf.reshape(nn_last_layer, (-1, num_classes),
+                        name='my_logits_reshape')
+    correct_label = tf.reshape(
+        correct_label, (-1, num_classes), name='my_correct_labels_reshape')
 
     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
         logits=logits, labels=correct_label, name='my_cross_entropy')
@@ -148,6 +153,8 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
                 trainables.append(variable)
         train_op = opt.minimize(
             mean_cross_entropy, var_list=trainables, name="training_operation")
+    else:
+        train_op = opt.minimize(mean_cross_entropy, name="training_operation")
     return logits, train_op, mean_cross_entropy
 
 
@@ -171,15 +178,15 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     """
     # TODO: Implement function
     loss_arr = []
-    for epoch in epochs:
-        print("EPOCH {} ...".format(i+1))
+    for epoch in range(epochs):
+        print("EPOCH {} ...".format(epoch+1))
         for X_batch, y_batch in get_batches_fn(batch_size):
             loss, _ = sess.run([cross_entropy_loss, train_op], feed_dict={
                 input_image: X_batch,
                 correct_label: y_batch,
                 # can be between 0 and 1 during training
-                keep_prob: keep_prob,
-                learning_rate: learning_rate
+                keep_prob: KEEP_PROB,
+                learning_rate: LEARNING_RATE
             })
         loss_arr.append(loss)
         print('Loss: {:.3f}'.format(loss))
@@ -191,6 +198,60 @@ tests.test_train_nn(train_nn)
 
 
 def run():
+    global FREEZE_GRAPH
+    global KEEP_PROB
+    global LEARNING_RATE
+    global EPOCHS
+    global BATCH_SIZE
+
+    parser = argparse.ArgumentParser(description='Semantic Segmentation')
+
+    parser.add_argument(
+        '-e',
+        '--epochs',
+        type=int,
+        nargs='?',
+        default=EPOCHS,
+        help='Number of epochs.'
+    )
+    parser.add_argument(
+        '-lr',
+        '--learning_rate',
+        type=float,
+        nargs='?',
+        default=LEARNING_RATE,
+        help='Learning rate'
+    )
+
+    parser.add_argument(
+        '-kp',
+        '--keep_probability',
+        type=float,
+        nargs='?',
+        default=KEEP_PROB,
+        help='Keep probability for dropout'
+    )
+
+    parser.add_argument(
+        '-b',
+        '--batch_size',
+        type=int,
+        nargs='?',
+        default=BATCH_SIZE,
+        help='Batch size.'
+    )
+
+    args = parser.parse_args()
+    print('\nArguments passed: ',args)
+
+    FREEZE_GRAPH = True
+    EPOCHS = args.epochs
+    LEARNING_RATE = args.learning_rate
+    KEEP_PROB = args.keep_probability
+    BATCH_SIZE = args.batch_size
+
+    print('\nTraining with epochs:', EPOCHS, 'learning rate:', LEARNING_RATE, 'keep_prob:', KEEP_PROB, 'batch_size:', BATCH_SIZE)
+
     num_classes = 2
     image_shape = (160, 576)
     data_dir = './data'
@@ -215,8 +276,8 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # TODO: Build NN using load_vgg, layers, and optimize function
-        epochs = 10
-        batch_size = 5
+        epochs = EPOCHS
+        batch_size = BATCH_SIZE
 
         label = tf.placeholder(
             tf.int32, [None, None, None, num_classes], name='my_label')
@@ -230,10 +291,20 @@ def run():
 
         logits, train_op, cross_entropy_loss = optimize(
             nn_last_layer, label, learning_rate, num_classes)
+
+        if FREEZE_GRAPH:
+            my_variable_initializers = [
+                var.initializer for var in tf.global_variables() if 'my_' in var.name or
+                'beta' in var.name
+            ]
+            sess.run(my_variable_initializers)
+        else:
+            sess.run(tf.global_variables_initializer())
+
         # TODO: Train NN using the train_nn function
 
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op,
-                 cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate)
+                 cross_entropy_loss, input_image, label, keep_prob, learning_rate)
 
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(
