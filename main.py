@@ -6,7 +6,6 @@ from distutils.version import LooseVersion
 import project_tests as tests
 import argparse
 
-FREEZE_GRAPH = False
 KEEP_PROB = 0.65
 LEARNING_RATE = 4e-5
 EPOCHS = 15
@@ -74,10 +73,6 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # TODO: Implement function
-    if FREEZE_GRAPH:
-        vgg_layer3_out = tf.stop_gradient(vgg_layer3_out)
-        vgg_layer4_out = tf.stop_gradient(vgg_layer4_out)
-        vgg_layer7_out = tf.stop_gradient(vgg_layer7_out)
 
     layer7_out_1x1 = tf.layers.conv2d(
         vgg_layer7_out, num_classes, (1, 1), padding='same',
@@ -145,28 +140,13 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     mean_cross_entropy = tf.reduce_mean(
         cross_entropy, name='my_mean_cross_entropy')
 
-    if FREEZE_GRAPH:
-        trainables = []
-        for variable in tf.trainable_variables():
-            if 'my_' in variable.name or 'beta' in variable.name:
-                trainables.append(variable)
-
-        regularizer = tf.add_n([tf.nn.l2_loss(v) for v in trainables]) * BETA
-
-        loss = tf.reduce_mean(mean_cross_entropy +
-                              regularizer, name='my_final_loss')
-
-        opt = tf.train.AdamOptimizer(
-            learning_rate=learning_rate, name='my_optmizer')
-        train_op = opt.minimize(loss, var_list=trainables,
-                                name="training_operation")
-    else:
-        regularizer = tf.add_n([tf.nn.l2_loss(v)
-                                for v in tf.trainable_variables()]) * BETA
-        loss = tf.reduce_mean(tf.add(mean_cross_entropy + regularizer))
-        opt = tf.train.AdamOptimizer(
-            learning_rate=learning_rate, name='my_optmizer')
-        train_op = opt.minimize(loss, name="training_operation")
+    regularizer = tf.add_n([tf.nn.l2_loss(v)
+                            for v in tf.trainable_variables()]) * BETA
+    loss = tf.reduce_mean(tf.add(mean_cross_entropy + regularizer))
+    opt = tf.train.AdamOptimizer(
+        learning_rate=learning_rate, name='my_optmizer')
+    train_op = opt.minimize(loss, name="training_operation")
+    
     return logits, train_op, mean_cross_entropy
 
 
@@ -216,7 +196,6 @@ tests.test_train_nn(train_nn)
 
 
 def run():
-    global FREEZE_GRAPH
     global KEEP_PROB
     global LEARNING_RATE
     global EPOCHS
@@ -268,19 +247,10 @@ def run():
         help='Beta value of loss regularizer.'
     )
 
-    parser.add_argument(
-        '-fg',
-        '--freeze_graph',
-        type=bool,
-        nargs='?',
-        default=FREEZE_GRAPH,
-        help='Beta value of loss regularizer.'
-    )
 
     args = parser.parse_args()
     print('\nArguments passed: ', args)
 
-    FREEZE_GRAPH = args.freeze_graph
     EPOCHS = args.epochs
     LEARNING_RATE = args.learning_rate
     KEEP_PROB = args.keep_probability
@@ -330,14 +300,7 @@ def run():
         logits, train_op, cross_entropy_loss = optimize(
             nn_last_layer, label, learning_rate, num_classes)
 
-        if FREEZE_GRAPH:
-            my_variable_initializers = [
-                var.initializer for var in tf.global_variables() if 'my_' in var.name or
-                'beta' in var.name
-            ]
-            sess.run(my_variable_initializers)
-        else:
-            sess.run(tf.global_variables_initializer())
+        sess.run(tf.global_variables_initializer())
 
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op,
                  cross_entropy_loss, input_image, label, keep_prob, learning_rate)
