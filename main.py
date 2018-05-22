@@ -142,7 +142,7 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
 
     regularizer = tf.add_n([tf.nn.l2_loss(v)
                             for v in tf.trainable_variables()]) * BETA
-    loss = tf.reduce_mean(tf.add(mean_cross_entropy + regularizer))
+    loss = tf.reduce_mean(tf.add(mean_cross_entropy, regularizer))
     opt = tf.train.AdamOptimizer(
         learning_rate=learning_rate, name='my_optmizer')
     train_op = opt.minimize(loss, name="training_operation")
@@ -170,7 +170,6 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     """
     # TODO: Implement function
     loss_arr = []
-    save_path = None
     for epoch in range(epochs):
         mean_loss = 0
         iterations = 0
@@ -187,9 +186,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             iterations += 1
         mean_loss /= iterations
         loss_arr.append(mean_loss)
-        print('Loss: {:.3f}'.format(mean_loss))
-
-    return save_path
+        print('Loss: {:.4f}'.format(mean_loss))
 
 
 tests.test_train_nn(train_nn)
@@ -294,8 +291,7 @@ def run():
         input_image, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(
             sess, vgg_path)
 
-        nn_last_layer = layers(
-            vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes)
+        nn_last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes)
 
         logits, train_op, cross_entropy_loss = optimize(
             nn_last_layer, label, learning_rate, num_classes)
