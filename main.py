@@ -7,10 +7,10 @@ import project_tests as tests
 import argparse
 
 FREEZE_GRAPH = False
-KEEP_PROB = 0.6
+KEEP_PROB = 0.35
 LEARNING_RATE = 4e-5
 EPOCHS = 20
-BATCH_SIZE = 8
+BATCH_SIZE = 4
 BETA = 2.5e-2
 
 
@@ -186,6 +186,8 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     loss_arr = []
     save_path = None
     for epoch in range(epochs):
+        mean_loss = 0
+        iterations = 0
         print("EPOCH {} ...".format(epoch+1))
         for X_batch, y_batch in get_batches_fn(batch_size):
             loss, _ = sess.run([cross_entropy_loss, train_op], feed_dict={
@@ -195,8 +197,11 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                 keep_prob: KEEP_PROB,
                 learning_rate: LEARNING_RATE
             })
-        loss_arr.append(loss)
-        print('Loss: {:.3f}'.format(loss))
+            mean_loss += loss
+            iterations += 1
+        mean_loss /= iterations
+        loss_arr.append(mean_loss)
+        print('Loss: {:.3f}'.format(mean_loss))
 
     return save_path
 
