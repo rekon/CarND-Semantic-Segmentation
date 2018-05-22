@@ -7,8 +7,8 @@ import project_tests as tests
 import argparse
 
 KEEP_PROB = 0.65
-LEARNING_RATE = 4e-5
-EPOCHS = 15
+LEARNING_RATE = 9e-5
+EPOCHS = 20
 BATCH_SIZE = 2
 BETA = 2.5e-2
 
@@ -140,12 +140,12 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     mean_cross_entropy = tf.reduce_mean(
         cross_entropy, name='my_mean_cross_entropy')
 
-    regularizer = tf.add_n([tf.nn.l2_loss(v)
-                            for v in tf.trainable_variables()]) * BETA
-    loss = tf.reduce_mean(tf.add(mean_cross_entropy, regularizer))
+#    regularizer = tf.add_n([tf.nn.l2_loss(v)
+#                            for v in tf.trainable_variables()]) * BETA
+#    loss = tf.reduce_mean(tf.add(mean_cross_entropy, regularizer))
     opt = tf.train.AdamOptimizer(
         learning_rate=learning_rate, name='my_optmizer')
-    train_op = opt.minimize(loss, name="training_operation")
+    train_op = opt.minimize(mean_cross_entropy, name="training_operation")
     
     return logits, train_op, mean_cross_entropy
 
