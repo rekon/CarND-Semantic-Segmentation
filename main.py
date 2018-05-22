@@ -265,7 +265,7 @@ def run():
     args = parser.parse_args()
     print('\nArguments passed: ', args)
 
-    FREEZE_GRAPH = True
+    FREEZE_GRAPH = False
     EPOCHS = args.epochs
     LEARNING_RATE = args.learning_rate
     KEEP_PROB = args.keep_probability
