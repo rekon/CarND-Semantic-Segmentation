@@ -7,11 +7,11 @@ import project_tests as tests
 import argparse
 
 FREEZE_GRAPH = False
-IS_TRAINING = False
-KEEP_PROB = 1
+KEEP_PROB = 0.6
 LEARNING_RATE = 4e-5
 EPOCHS = 20
 BATCH_SIZE = 8
+BETA = 2.5e-2
 
 
 # Check TensorFlow Version
@@ -145,17 +145,21 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     mean_cross_entropy = tf.reduce_mean(
         cross_entropy, name='my_mean_cross_entropy')
 
-    opt = tf.train.AdamOptimizer(
-        learning_rate=learning_rate, name='my_optmizer')
-
     if FREEZE_GRAPH:
         trainables = []
         for variable in tf.trainable_variables():
             if 'my_' in variable.name or 'beta' in variable.name:
                 trainables.append(variable)
-        train_op = opt.minimize(
-            mean_cross_entropy, var_list=trainables, name="training_operation")
+                
+        regularizer = tf.add_n([tf.nn.l2_loss(v) for v in trainables]) * BETA
+
+        loss = tf.reduce_mean(mean_cross_entropy +
+                              regularizer, name='my_final_loss')
+        
+        opt = tf.train.AdamOptimizer(learning_rate=learning_rate, name='my_optmizer')
+        train_op = opt.minimize(loss, var_list=trainables, name="training_operation")
     else:
+        opt = tf.train.AdamOptimizer(learning_rate=learning_rate, name='my_optmizer')
         train_op = opt.minimize(mean_cross_entropy, name="training_operation")
     return logits, train_op, mean_cross_entropy
 
@@ -180,10 +184,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     """
     # TODO: Implement function
     loss_arr = []
-    min_loss = 1e5
     save_path = None
-    if IS_TRAINING:
-        saver = tf.train.Saver()
     for epoch in range(epochs):
         print("EPOCH {} ...".format(epoch+1))
         for X_batch, y_batch in get_batches_fn(batch_size):
@@ -196,9 +197,6 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             })
         loss_arr.append(loss)
         print('Loss: {:.3f}'.format(loss))
-        if loss < min_loss and IS_TRAINING:
-            min_loss = loss
-            save_path = saver.save(sess, "/checkpoints/model.ckpt")
 
     return save_path
 
@@ -208,11 +206,11 @@ tests.test_train_nn(train_nn)
 
 def run():
     global FREEZE_GRAPH
-    global IS_TRAINING
     global KEEP_PROB
     global LEARNING_RATE
     global EPOCHS
     global BATCH_SIZE
+    global BETA
 
     parser = argparse.ArgumentParser(description='Semantic Segmentation')
 
@@ -250,16 +248,24 @@ def run():
         default=BATCH_SIZE,
         help='Batch size.'
     )
+    parser.add_argument(
+        '-beta',
+        '--beta',
+        type=float,
+        nargs='?',
+        default=BETA,
+        help='Beta value of loss regularizer.'
+    )
 
     args = parser.parse_args()
     print('\nArguments passed: ', args)
 
     FREEZE_GRAPH = True
-    IS_TRAINING = True
     EPOCHS = args.epochs
     LEARNING_RATE = args.learning_rate
     KEEP_PROB = args.keep_probability
     BATCH_SIZE = args.batch_size
+    BETA = args.beta
 
     print('\nTraining with epochs:', EPOCHS, 'learning rate:',
           LEARNING_RATE, 'keep_prob:', KEEP_PROB, 'batch_size:', BATCH_SIZE)
@@ -313,16 +319,9 @@ def run():
         else:
             sess.run(tf.global_variables_initializer())
 
-        saver = tf.train.Saver()
-
-        # TODO: Train NN using the train_nn function
-
-        best_session_path = train_nn(sess, epochs, batch_size, get_batches_fn, train_op,
+        train_nn(sess, epochs, batch_size, get_batches_fn, train_op,
                  cross_entropy_loss, input_image, label, keep_prob, learning_rate)
 
-        if IS_TRAINING:
-            saver.restore(sess, best_session_path)
-        # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(
             runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
@@ -330,4 +329,5 @@ def run():
 
 
 if __name__ == '__main__':
+    tf.reset_default_graph()
     run()
