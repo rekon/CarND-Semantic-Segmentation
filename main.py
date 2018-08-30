@@ -184,6 +184,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             })
             mean_loss += loss
             iterations += 1
+            print('Epoch:',epoch,'Iteration:',iterations,'Loss:',loss)
         mean_loss /= iterations
         loss_arr.append(mean_loss)
         print('Loss: {:.4f}'.format(mean_loss))
@@ -258,7 +259,7 @@ def run():
           LEARNING_RATE, 'keep_prob:', KEEP_PROB, 'batch_size:', BATCH_SIZE)
 
     num_classes = 2
-    image_shape = (160, 576)
+    image_shape = (256, 256)
     data_dir = './data'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
@@ -275,7 +276,7 @@ def run():
         vgg_path = os.path.join(data_dir, 'vgg')
         # Create function to get batches
         get_batches_fn = helper.gen_batch_function(
-            os.path.join(data_dir, 'data_road/training'), image_shape)
+            os.path.join(data_dir, 'data_smoke/training'), image_shape)
 
         # OPTIONAL: Augment Images for better results
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
